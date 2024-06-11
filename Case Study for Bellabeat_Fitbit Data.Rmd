@@ -1,0 +1,257 @@
+---
+title: 'Case Study for Bellabeat: Fitbit Data'
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+### About Bellabeat
+
+  Bellabeat is a fem-tech business producing "exquisitely designed" products focused on syncing and tracking women's health.Their mission is to empower women to take control of their health by providing them with techinology-driven solutions that blend design and function. They provide smart insights by collecting biometric and lifestyle data. Women-centric algorithms, technology, and design created for women and tested by women.
+  
+### Questions for the analysis
+
+  1. What are some trends in smart device usage?
+  2. How could these trends apply to Bellabeat customers?
+  3. How could these trends help influence Bellabeat marketing strategy?
+
+### Business Task
+
+  Provide analysis and make data-driven recommendations for Bellabeat’s marketing strategy and growth.
+
+### Prepare
+
+  For this analysis the data set was downloaded from Kaggle. Thirty eligible Fitbit users consented to the submission of
+personal tracker data, including minute-level output for physical activity, heart rate, and sleep monitoring. It includes
+information about daily activity, steps, and heart rate that can be used to explore users’ habits.
+
+### Process
+
+  This notebook will provide the full breakdown of my analysis process and visualizations utilizing R. 
+  
+### Installing and loading common packages and libraries
+
+```{r}
+library(readr)
+library(tidyverse)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+```
+
+### Uploading data
+
+getwd() It is important to set the correct working directory "getwd()" prior to using the read.csv function
+```{r}
+# 3/12/16 - 4/11/16 (March to April Data Set)
+setwd("D:/Google Data Analytics Course/Capstone/Fitbit_Data/3.12.16-4.11.16")
+
+daily_activity1 <- read.csv("dailyActivity_merged.csv")
+
+hourly_intensities1 <- read.csv("hourlyintensities_merged.csv")
+
+```
+
+```{r}
+# 4/12/16 - 5/12/16 (April to May Data Set)
+setwd("D:/Google Data Analytics Course/Capstone/Fitbit_Data/4.12.16-5.12.16")
+
+daily_activity2 <- read.csv("dailyActivity_merged.csv")
+
+hourly_intensities2 <- read.csv("hourlyintensities_merged.csv")
+
+sleep_day <- read.csv("sleepDay_merged.csv")
+```
+
+I need to split date and time in sleep day and hourly intensities data sets
+
+```{r}
+# sleepday, convert date and time from character to numeric
+
+sleep_day$SleepDay <- mdy_hms(sleep_day$SleepDay)
+
+# create date column, as I will be using the ID column and date column to later merge sleep day and daily activity 2 data sets.
+
+sleep_day$Date <- format(sleep_day$SleepDay, format = "%m/%d/%y")
+
+# In hourly intensities the Activity Hour column is formatted as a character and not a date and time value.
+# This will need to be converted prior to splitting Date and Time columns.
+
+# hourly intensities 1
+
+hourly_intensities1$ActivityHour <- mdy_hms(hourly_intensities1$ActivityHour)
+
+# create Time and Date column
+
+hourly_intensities1$Time <- format(hourly_intensities1$ActivityHour, format = "%H:%M%:%S")
+hourly_intensities1$Date <- format(hourly_intensities1$ActivityHour, format = "%m/%d/%y")
+
+# hourly intensities 2
+
+hourly_intensities2$ActivityHour <- mdy_hms(hourly_intensities2$ActivityHour)
+
+# create Time and Date column
+
+hourly_intensities2$Time <- format(hourly_intensities2$ActivityHour, format = "%H:%M%:%S")
+hourly_intensities2$Date <- format(hourly_intensities2$ActivityHour, format = "%m/%d/%y")
+```
+
+I Need to make a Date column for daily activity 1 & 2 that matches our other Date columns
+
+```{r}
+daily_activity1$ActivityDate <- mdy(daily_activity1$ActivityDate)
+
+colnames(daily_activity1)[colnames(daily_activity1) == "ActivityDate"] <- "Date"
+
+daily_activity1$Date <- format(daily_activity1$Date, format = "%m/%d/%y")
+```
+
+```{r}
+daily_activity2$ActivityDate <- mdy(daily_activity2$ActivityDate)
+
+colnames(daily_activity2)[colnames(daily_activity2) == "ActivityDate"] <- "Date"
+
+daily_activity2$Date <- format(daily_activity2$Date, format = "%m/%d/%y")
+```
+
+Now that time and date have been split into separate columns I can look at the data sets a little closer
+
+```{r}
+n_distinct(sleep_day$Id)
+n_distinct(hourly_intensities1$Id)
+n_distinct(hourly_intensities2$Id)
+n_distinct(daily_activity1$Id)
+n_distinct(daily_activity2$Id)
+```
+
+There are 35 participants in the daily activity1 and 34 in both the hourly intensities1 data sets from March to April.
+
+There are 33 participants in the daily activity2 and hourly intensities2 data sets from April to May.However, there only 24 participants in the Sleep day data set.
+
+### Summary of statistics within data sets:
+
+#### Daily Activity
+
+```{r}
+daily_activity1 %>% 
+  select(TotalSteps, TotalDistance, SedentaryMinutes) %>% 
+  summary()
+
+daily_activity2 %>% 
+  select(TotalSteps, TotalDistance, SedentaryMinutes) %>% 
+  summary()
+```
+- The averages of "sedentary minutes" were 991+ minutes in both groups, which is around 16-17 hours. The average American adult spends 9.5 hours per day in sedentary time according to research conducted in 2019 by the American College of Sports Medicine.
+
+- In daily activity 1 the average "Total Steps" was 6547 and 7638 steps in daily activity 2. According to the Mayo Clinic the average American walks 3,000 - 4,000 steps a day, but should aim for 10,000 steps per day to reduce the risk of common health problems. There are device wearers within the 3rd quadrant in both data sets that achieved 10,000+ steps.
+
+#### Number of active minutes
+
+```{r}
+daily_activity1 %>% 
+  select(VeryActiveMinutes, FairlyActiveMinutes, LightlyActiveMinutes) %>% 
+  summary()
+
+daily_activity2 %>% 
+  select(VeryActiveMinutes, FairlyActiveMinutes, LightlyActiveMinutes) %>% 
+  summary()
+```
+- A majority of wearers in both data sets are "light active". The average time  spent in "Very Active" is from 16 - 21 minutes. The average time spent in "Fairly Active" is around 13 minutes.
+
+#### Number of active distance traveled
+
+```{r}
+daily_activity1 %>% 
+  select(VeryActiveDistance, ModeratelyActiveDistance, LightActiveDistance) %>% 
+  summary()
+
+daily_activity2 %>% 
+  select(VeryActiveDistance, ModeratelyActiveDistance, LightActiveDistance) %>% 
+  summary()
+```
+- The longest average distance in both groups is a "light active distance" of ~3 miles. 
+
+#### Total minutes asleep and total time in bed
+
+```{r}
+sleep_day %>% 
+  select(TotalSleepRecords, TotalMinutesAsleep, TotalTimeInBed) %>%
+  summary()
+```
+- The average total time in bed is slightly above the total minutes asleep. However there appears to be wearers in the 3rd quadrant that exceed total minutes asleep.
+
+#### Some visualizations
+
+To visualize some data I am going to merge April-to-May's Sleep day and Daily Activity data sets, as March-to-April did not have a Sleep day data set.
+
+```{r}
+da_sleep <- merge(sleep_day, daily_activity2, by=c('Id', 'Date'))
+```
+
+##### Relationship between Total Minutes Asleep vs. Total Time In Bed
+
+```{r}
+ggplot(data = sleep_day, aes(x = TotalMinutesAsleep, y = TotalTimeInBed)) + 
+  geom_point(color = "purple") +
+  labs(title = "Total Minutes Asleep vs. Total Time in Bed")
+```
+It appears some wearers do not go to sleep right away while in bed. Although the relationship between total minutes asleep and total time in bed does appear mostly linear.
+
+
+##### Relationship between Total Minutes Asleep vs. Sedentary Minutes
+```{r}
+ggplot(data = da_sleep, aes(x = TotalMinutesAsleep, y=SedentaryMinutes)) +
+  geom_point(color = "purple") +
+  labs(title = "Total Minutes Asleep vs. Sedentary Minutes")
+```
+A negative relationship its shown with less time asleep in wearers who spent a higher amount of time sedentary.
+
+#### Relationship between Total Minutes Asleep vs. Lightly & Very Active Minutes
+```{r}
+ggplot(data = da_sleep, aes(x = TotalMinutesAsleep, y = LightlyActiveMinutes, color = VeryActiveMinutes, size = VeryActiveMinutes)) +
+  geom_point() +
+  scale_color_gradient(low = "blue", high = "red") +
+  labs(title = "Total Minutes Asleep vs. Lightly & Very Active Minutes", x = "Total Minutes Asleep", y = "Lightly Active Minutes", size = "Very Active Minutes") +
+  theme_minimal()
+```
+Very active wearers do not sleep more than Lightly active wearers. Although there is a high concentration of both lightly active and very active wearers that sleep an average amount of time.
+
+##### Intensity over Time
+
+```{r}
+intensity_results1 <- hourly_intensities1 %>% 
+  group_by(Time) %>% 
+  drop_na() %>% 
+  summarise(mean_total_int = mean(TotalIntensity))
+
+intensity_results2 <- hourly_intensities2 %>% 
+  group_by(Time) %>% 
+  drop_na() %>% 
+  summarise(mean_total_int = mean(TotalIntensity))
+
+comb_intensity <- dplyr::bind_rows(intensity_results1, intensity_results2)
+
+ggplot(data = comb_intensity, aes(x = Time, y = mean_total_int)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Mean Total Intensity over Time", x = "Time", y = "Mean Total Intensity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+Both data sets demonstrate peak hours of activity during the hours of 5:00 pm and 7:00 pm with the next lowest being at 12 pm. This is most likely the optimal time to perform exercise activity in the average wearer's schedule.
+
+
+
+## Conclusion
+
+A few things to note, it was not clear of the gender makeup of this cohort, location, nor age group.The average total steps conducted by this cohort is below the recommended averages by Mayo Clinic. The Device wearers seem to be the most active during the hours after work and prior to 8:00 pm. Device wearers prefer light activity over very active "activity." Additionally, they prefer lightly active distances rather than very active distances.Device wearers seem to follow a positive linear pattern in regards to time spent in bed and total minutes asleep.However, it seems any amount activity is beneficial in regards to receiving more time asleep, no matter if it is a light activity or a "very" active activity. 
+
+## Next Steps
+
+#### Recommendations for Bellabeat products
+
+1. Since devices can track activity and steps it would be best to set goals for wearers of different physical levels. Goals as such to improve their daily total steps, amount and type of physical active minutes, and even amount and distance of physical activity. For example, setting goals of 8,000, 9,000, and 10,000 steps since the average of total steps was around 6,000 to 7,000 steps. Additionally, decreasing ones sedentary minutes from 16-17 hours (average found in these data sets) to below 9.5 hours. More information would be needed on how sedentary minutes are measured, and goals within in the consideration of a traditional 8-hour work day.
+
+2. Milestones can be another great addition to tracking ones success as they improve their amount of time being physically active at specific intensities. These milestones could improve users desire to improve the majority of time spent lightly active to fairly and very active. The milestones could be rewarded with celebration and the option of digitally sharing them within the Bellabeat and other social communities. 
+
+3. Notifications can be helpful reminders for wearers at peak times of physical activity (after work hours), to go to sleep when already spending time in bed, and also in reducing their sedentary minutes.
+
